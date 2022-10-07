@@ -133,3 +133,4 @@ dmypy.json
 .idea
 .vscode
 backend/foodgram/media/recipes/images/
+backend/foodgram/media/recipes/images
