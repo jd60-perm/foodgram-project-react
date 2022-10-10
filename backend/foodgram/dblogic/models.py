@@ -83,7 +83,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='resipes',
+        related_name='recipes',
         verbose_name='Автор рецепта',
         help_text='Автор заполняется автоматически',
     )
@@ -165,14 +165,14 @@ class Follow(models.Model):
     follower=models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='followers',
+        related_name='followings',
         verbose_name='Подписчик',
         help_text='Пользователь, который подписывается',
     )
     following=models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='followings',
+        related_name='followers',
         verbose_name='Автор подписки',
         help_text='Пользователь, на которого подписываются',
     )
@@ -233,6 +233,7 @@ class ShoppingCart(models.Model):
     )
     recipe=models.ManyToManyField(
         Recipe,
+        related_name='shoppingcart',
         verbose_name='Добавленные рецепты',
         help_text='Набор рецептов для списка покупок',
     )

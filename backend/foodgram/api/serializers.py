@@ -10,11 +10,18 @@ from django.core.files.base import ContentFile
 
 User = get_user_model()
 
+
 class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
         fields = '__all__'
+
+
+class CustomTagSerializer(serializers.PrimaryKeyRelatedField):
+    def to_representation(self, value):
+        tags = TagSerializer(value)
+        return tags.data
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -41,12 +48,6 @@ class Base64ImageField(serializers.ImageField):
             ext = format.split('/')[-1]  
             data = ContentFile(base64.b64decode(imgstr), name=f'IMG_{datetime.datetime.now()}.' + ext)
         return super().to_internal_value(data)
-
-
-class CustomTagSerializer(serializers.PrimaryKeyRelatedField):
-    def to_representation(self, value):
-        tags = TagSerializer(value)
-        return tags.data
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -116,3 +117,57 @@ class RecipeSerializer(serializers.ModelSerializer):
                 )
         instance.save()
         return instance 
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    email = serializers.SlugRelatedField(read_only=True, source='following', slug_field='email')
+    id = serializers.PrimaryKeyRelatedField(read_only=True, source='following')
+    username = serializers.SlugRelatedField(read_only=True, source='following', slug_field='username')
+    first_name = serializers.SlugRelatedField(read_only=True, source='following', slug_field='first_name')
+    last_name = serializers.SlugRelatedField(read_only=True, source='following', slug_field='last_name')
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = FavoriteSerializer(source='following.recipes', many=True, read_only=True)
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Follow
+        fields = (
+            'email', 'id', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'recipes', 'recipes_count'
+        )
+
+    def get_is_subscribed(self, obj):
+        if not isinstance(self.context['request'].user, AnonymousUser):
+            return True
+        return False
+
+    def get_recipes_count(self, obj):
+        return obj.following.recipes.count()
+
+
+
+
+# {
+# "email": "user@example.com",
+# "id": 0,
+# "username": "string",
+# "first_name": "Вася",
+# "last_name": "Пупкин",
+# "is_subscribed": true,
+# "recipes": [
+# {
+# "id": 0,
+# "name": "string",
+# "image": "http://foodgram.example.org/media/recipes/images/image.jpeg",
+# "cooking_time": 1
+# }
+# ],
+# "recipes_count": 0
+# }
