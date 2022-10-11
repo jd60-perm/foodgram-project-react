@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv.main import load_dotenv
 
 load_dotenv()
@@ -7,10 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-e_____j59+*hfl6=_%($3n@woc_bqu+cs5hg*nxrdsu7+jw0#j'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.120', '*', 'localhost']
+ALLOWED_HOSTS = ['*', ]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -20,14 +20,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'django_filters',
     'corsheaders',
     'rest_framework.authtoken',
     'djoser',
     'users',
     'dblogic',
     'api',
-
 ]
 
 MIDDLEWARE = [
@@ -70,7 +68,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 6,
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny', 
+        'rest_framework.permissions.IsAuthenticated', 
     ],
 }
 
@@ -112,9 +110,8 @@ USE_L10N = True
 
 USE_TZ = True
 
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-# STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
+STATIC_URL = '/djangostatic/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'djangostatic')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -132,5 +129,6 @@ DJOSER = {
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
-] 
+]
+
 CORS_URLS_REGEX = r'^/api/.*$'

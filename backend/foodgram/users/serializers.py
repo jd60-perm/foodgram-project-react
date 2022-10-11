@@ -1,12 +1,12 @@
-from django.contrib.auth import get_user_model, authenticate
-from rest_framework import serializers
-from djoser.serializers import UserSerializer, TokenCreateSerializer
-from django.contrib.auth.models import AnonymousUser
-
 from dblogic.models import Follow
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.models import AnonymousUser
 from djoser.conf import settings
+from djoser.serializers import TokenCreateSerializer, UserSerializer
+from rest_framework import serializers
 
 User = get_user_model()
+
 
 class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
@@ -19,11 +19,13 @@ class CustomUserSerializer(UserSerializer):
             'is_subscribed',
         )
         read_only_fields = (settings.LOGIN_FIELD,)
-        
 
     def get_is_subscribed(self, obj):
         if not isinstance(self.context['request'].user, AnonymousUser):
-            return Follow.objects.filter(follower=self.context['request'].user, following=obj).exists()
+            return Follow.objects.filter(
+                follower=self.context['request'].user,
+                following=obj
+            ).exists()
         return False
 
 
@@ -31,7 +33,9 @@ class CustomTokenCreateSerializer(TokenCreateSerializer):
 
     def validate(self, attrs):
         password = attrs.get("password")
-        params = {settings.LOGIN_FIELD: attrs.get(settings.LOGIN_FIELD).lower()}
+        params = {
+            settings.LOGIN_FIELD: attrs.get(settings.LOGIN_FIELD).lower()
+        }
         self.user = authenticate(
             request=self.context.get("request"), **params, password=password
         )

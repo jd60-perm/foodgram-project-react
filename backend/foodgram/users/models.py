@@ -1,6 +1,8 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager,
+                                        PermissionsMixin)
 from django.core.mail import send_mail
 from django.db import models
+
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
@@ -34,6 +36,7 @@ class UserManager(BaseUserManager):
 
         return self._create_user(email, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(
         max_length=254,
@@ -54,19 +57,21 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name='Фамилия',
     )
     is_active = models.BooleanField(verbose_name='is_active', default=True)
-    date_joined = models.DateTimeField(verbose_name='Заригистрирован', auto_now_add=True)
+    date_joined = models.DateTimeField(
+        verbose_name='Заригистрирован',
+        auto_now_add=True
+    )
     is_staff = models.BooleanField(default=False)
 
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
-   
+
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('-id',)
-
 
     def get_full_name(self):
         return u'%s %s' % (self.first_name, self.last_name)

@@ -1,33 +1,38 @@
-from django import views
-from rest_framework import views
-from rest_framework import viewsets, filters
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.response import Response
-from rest_framework import status
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
 import io
+
+from dblogic.models import (Favorite, Follow, Ingredient, Recipe, ShoppingCart,
+                            Tag)
 from django.http import FileResponse
-from reportlab.pdfgen import canvas
+from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+from rest_framework import status, views, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
+from rest_framework.response import Response
+from users.models import User
+
 from foodgram.settings import BASE_DIR
 
-from users.models import User
-from dblogic.models import Tag, Ingredient, Recipe, Favorite, Follow, ShoppingCart
-from .serializers import TagSerializer, IngredientSerializer, RecipeSerializer, FavoriteSerializer, FollowSerializer
+from .serializers import (FavoriteSerializer, FollowSerializer,
+                          IngredientSerializer, RecipeSerializer,
+                          TagSerializer)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
+    permission_classes = AllowAny,
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
+    permission_classes = AllowAny,
 
     def get_queryset(self):
         queryset = Ingredient.objects.all()
@@ -40,33 +45,41 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('name',)
-    search_fields = ('^name',)
+    permission_classes = IsAuthenticatedOrReadOnly,
 
     def get_queryset(self):
         queryset = Recipe.objects.all()
-        is_in_cart_filter = self.request.query_params.get('is_in_shopping_cart', None)
+        is_in_cart_filter = self.request.query_params.get(
+            'is_in_shopping_cart',
+            None
+        )
         if is_in_cart_filter == '1':
             try:
                 cart = get_object_or_404(ShoppingCart, user=self.request.user)
             except Exception:
                 queryset = Recipe.objects.none()
                 return queryset
-            queryset=queryset.filter(shoppingcart=cart.id)
+            queryset = queryset.filter(shoppingcart=cart.id)
             return queryset
-        is_favorited_filter = self.request.query_params.get('is_favorited', None)
+        is_favorited_filter = self.request.query_params.get(
+            'is_favorited',
+            None
+        )
         author_filter = self.request.query_params.get('author', None)
         tags = self.request.query_params.getlist('tags')
         if tags:
-            queryset=queryset.filter(tags__slug__in=tags).distinct()
+            queryset = queryset.filter(tags__slug__in=tags).distinct()
         if author_filter:
-            queryset=queryset.filter(author__id=author_filter)
+            queryset = queryset.filter(author__id=author_filter)
         if is_favorited_filter == '1':
-            queryset=queryset.filter(favorites__user=self.request.user)
+            queryset = queryset.filter(favorites__user=self.request.user)
         return queryset
-    
-    @action(detail=False, methods=['get',])
+
+    @action(
+        detail=False,
+        methods=['get', ],
+        permission_classes=[IsAuthenticated, ]
+    )
     def download_shopping_cart(self, request):
         cart = ShoppingCart.objects.get_or_create(user=self.request.user)
         recipes = cart[0].recipe.all()
@@ -82,9 +95,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     cart_ingredients[name] = amount
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer)
-        pdfmetrics.registerFont(TTFont('arial', f'{BASE_DIR}\\static\\arial.ttf'))
-        p.setFont('arial', 14)
+        pdfmetrics.registerFont(
+            TTFont('arial', f'{BASE_DIR}\\djangostatic\\arial.ttf')
+        )
+        p.setFont('arial', 16)
         p.drawString(100, 750, "Список покупок из проекта FOODGRAM:")
+        p.setFont('arial', 12)
         textobject = p.beginText(100, 720)
         for key in cart_ingredients:
             textobject.textLine(f'- {key} - {cart_ingredients[key]}')
@@ -92,22 +108,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
         p.showPage()
         p.save()
         buffer.seek(0)
-        return FileResponse(buffer, as_attachment=True, filename='shopping_cart.pdf')
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename='shopping_cart.pdf'
+        )
 
 
 class FavoriteView(views.APIView):
     def post(self, request, *args, **kwargs):
         user = self.request.user
-        recipe = Recipe.objects.get(id=self.kwargs.get('recipe_id'))
+        recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
         obj = Favorite.objects.create(user=user, recipe=recipe)
-        serializer = FavoriteSerializer(obj.recipe, context={'request': request})
+        serializer = FavoriteSerializer(
+            obj.recipe, context={'request': request}
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED, )
 
     def delete(self, request, *args, **kwargs):
         user = self.request.user
-        recipe = Recipe.objects.get(id=self.kwargs.get('recipe_id'))
-        ###  Вставить обработку 400
-        obj = Favorite.objects.get(user=user, recipe=recipe)
+        recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
+        obj = get_object_or_404(Favorite, user=user, recipe=recipe)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -115,16 +136,15 @@ class FavoriteView(views.APIView):
 class FollowView(views.APIView):
     def post(self, request, *args, **kwargs):
         follower = self.request.user
-        following = User.objects.get(id=self.kwargs.get('user_id'))
+        following = get_object_or_404(User, id=self.kwargs.get('user_id'))
         obj = Follow.objects.create(follower=follower, following=following)
         serializer = FollowSerializer(obj, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED, )
 
     def delete(self, request, *args, **kwargs):
         follower = self.request.user
-        following = User.objects.get(id=self.kwargs.get('user_id'))
-        ###  Вставить обработку 400
-        obj = Follow.objects.get(follower=follower, following=following)
+        following = get_object_or_404(User, id=self.kwargs.get('user_id'))
+        obj = get_object_or_404(Follow, follower=follower, following=following)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -132,7 +152,7 @@ class FollowView(views.APIView):
 class ShoppingCartView(views.APIView):
     def post(self, request, *args, **kwargs):
         user = self.request.user
-        recipe = Recipe.objects.get(id=self.kwargs.get('recipe_id'))
+        recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
         obj = ShoppingCart.objects.get_or_create(user=user)
         recipe.shoppingcart.add(obj[0].id)
         serializer = FavoriteSerializer(recipe, context={'request': request})
@@ -140,8 +160,7 @@ class ShoppingCartView(views.APIView):
 
     def delete(self, request, *args, **kwargs):
         user = self.request.user
-        recipe = Recipe.objects.get(id=self.kwargs.get('recipe_id'))
-        ###  Вставить обработку 400
-        obj = ShoppingCart.objects.get(user=user, recipe=recipe)
+        recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
+        obj = get_object_or_404(ShoppingCart, user=user, recipe=recipe)
         recipe.shoppingcart.remove(obj.id)
         return Response(status=status.HTTP_204_NO_CONTENT)

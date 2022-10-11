@@ -1,8 +1,7 @@
 from csv import DictReader
-from django.core.management import BaseCommand
 
 from dblogic.models import Ingredient
-
+from django.core.management import BaseCommand
 
 ALREDY_LOADED_ERROR_MESSAGE = """
 If you need to reload data from the CSV file,
@@ -24,8 +23,10 @@ class Command(BaseCommand):
 
         print("Loading data")
 
-        for row in DictReader(open('../../data/ingredients.csv', encoding='utf-8')):
-            ingridient=Ingredient(
+        for row in DictReader(
+            open('../../data/ingredients.csv', encoding='utf-8')
+        ):
+            ingridient = Ingredient(
                 name=row['name'],
                 measurement_unit=row['measurement_unit'],
             )  
