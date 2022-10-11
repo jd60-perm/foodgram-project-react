@@ -5,6 +5,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from rest_framework.decorators import action
+import io
+from django.http import FileResponse
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from foodgram.settings import BASE_DIR
 
 from users.models import User
 from dblogic.models import Tag, Ingredient, Recipe, Favorite, Follow, ShoppingCart
@@ -37,7 +44,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_fields = ('name',)
     search_fields = ('^name',)
 
-
     def get_queryset(self):
         queryset = Recipe.objects.all()
         is_in_cart_filter = self.request.query_params.get('is_in_shopping_cart', None)
@@ -52,12 +58,41 @@ class RecipeViewSet(viewsets.ModelViewSet):
         is_favorited_filter = self.request.query_params.get('is_favorited', None)
         author_filter = self.request.query_params.get('author', None)
         tags = self.request.query_params.getlist('tags')
-        queryset=queryset.filter(tags__slug__in=tags).distinct()
+        if tags:
+            queryset=queryset.filter(tags__slug__in=tags).distinct()
         if author_filter:
             queryset=queryset.filter(author__id=author_filter)
         if is_favorited_filter == '1':
             queryset=queryset.filter(favorites__user=self.request.user)
         return queryset
+    
+    @action(detail=False, methods=['get',])
+    def download_shopping_cart(self, request):
+        cart = ShoppingCart.objects.get_or_create(user=self.request.user)
+        recipes = cart[0].recipe.all()
+        cart_ingredients = {}
+        for recipe in recipes:
+            ingredients_in_recipe = recipe.ingredients_set.all()
+            for ingredient_in_recipe in ingredients_in_recipe:
+                name = str(ingredient_in_recipe.ingredient)
+                amount = ingredient_in_recipe.amount
+                if name in cart_ingredients.keys():
+                    cart_ingredients[name] = cart_ingredients[name] + amount
+                else:
+                    cart_ingredients[name] = amount
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer)
+        pdfmetrics.registerFont(TTFont('arial', f'{BASE_DIR}\\static\\arial.ttf'))
+        p.setFont('arial', 14)
+        p.drawString(100, 750, "Список покупок из проекта FOODGRAM:")
+        textobject = p.beginText(100, 720)
+        for key in cart_ingredients:
+            textobject.textLine(f'- {key} - {cart_ingredients[key]}')
+        p.drawText(textobject)
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        return FileResponse(buffer, as_attachment=True, filename='shopping_cart.pdf')
 
 
 class FavoriteView(views.APIView):
