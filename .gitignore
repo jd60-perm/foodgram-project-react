@@ -132,5 +132,5 @@ dmypy.json
 # .idea
 .idea
 .vscode
-backend/foodgram/media/recipes/images/*
-backend/foodgram/media/*
+**/media/
+*.jpg
