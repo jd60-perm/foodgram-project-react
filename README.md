@@ -5,9 +5,14 @@
 Приложение мини социальная сеть по обмену рецептами приготовления
 блюд. Backend на фреймворке Django, Frontend на React.
 
+Проект реализован посредством создания 3-х контейнеров Docker и выложен на сервере:
+http://jd60.ddns.net     (178.154.226.188)
+
+Данные суперпользователя:    admin@admin.com     Qwerty1234$
+
 ### Шаблон наполнения env-файла:
 
-Расположение файла: backend/foodgram/foodgram/.env
+Расположение файла: infra/.env
 Данный файл используется для передачи в окружение
 приложения следующих переменных без их явного указания в коде:
 
@@ -19,45 +24,46 @@ DB_HOST=<имя хоста БД>
 DB_PORT=<порт БД>
 
 
-### Команды для локального запуска Backend:
+### Команды для запуска приложения в контейнерах:
 
-Создать виртуальное окружение
+Для управления через docker-compose перейдите в директорию infra:
 ```
-python -m venv venv
-```
-
-Активировать виртуальное окружение
-```
-source venv/Scripts/activate
+cd infra
 ```
 
-Установить используемые библиотеки
+Создать образы и запустить их контейнеры:
 ```
-pip install -r backend/requirements.txt
-```
-
-Выполнить миграции
-```
-python backend/foodgram/manage.py makemigrations
-python backend/foodgram/manage.py migrate
+sudo docker-compose up
 ```
 
-Создать суперпользователя
+Миграции для моделей и сбор статики создаются на этапе сборки контейнера backend.
+
+Применить миграции в БД:
 ```
-python backend/foodgram/manage.py createsuperuser
+sudo docker-compose exec backend python3 manage.py migrate
 ```
 
-Загрузить список ингридиентов
+
+Создать суперпользователя в БД для администрирования:
 ```
-python backend/foodgram/manage.py load_data
+sudo docker-compose exec backend python3 manage.py createsuperuser
 ```
 
-Подготовить файлы статики
+Загрузить предустановленную таблицу ингредиентов:
 ```
-python backend/foodgram/manage.py collectstatic --no-input
+sudo docker-compose exec backend python3 manage.py load_data
 ```
 
-Загрузить локальный сервер
+### Команда для заполнения базы тестовыми данными(перед выполнение очистить БД):
+
 ```
-python backend/foodgram/manage.py runserver
+sudo docker-compose exec backend python3 manage.py loaddata fixtures.json
 ```
+
+### Файл с тестовыми данными в репозиторий не входит, он может быть снят с заполненной базы данных командой:
+```
+sudo docker-compose exec backend python3 manage.py dumpdata > fixtures.json
+```
+
+
+
