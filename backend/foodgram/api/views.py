@@ -4,6 +4,7 @@ from dblogic.models import (Favorite, Follow, Ingredient, Recipe, ShoppingCart,
                             Tag)
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from foodgram.settings import BASE_DIR
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -13,8 +14,6 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from users.models import User
-
-from foodgram.settings import BASE_DIR
 
 from .serializers import (FavoriteSerializer, FollowSerializer,
                           IngredientSerializer, RecipeSerializer,
@@ -37,7 +36,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = Ingredient.objects.all()
         name_filter = self.request.query_params.get('name', None)
-        print(name_filter)
         queryset = queryset.filter(name__istartswith=name_filter)
         return queryset
 
@@ -96,7 +94,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer)
         pdfmetrics.registerFont(
-            TTFont('arial', f'{BASE_DIR}\\djangostatic\\arial.ttf')
+            TTFont('arial', f'{BASE_DIR}/djangostatic/arial.ttf')
         )
         p.setFont('arial', 16)
         p.drawString(100, 750, "Список покупок из проекта FOODGRAM:")
@@ -115,24 +113,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
 
-class FavoriteView(views.APIView):
-    def post(self, request, *args, **kwargs):
-        user = self.request.user
-        recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
-        obj = Favorite.objects.create(user=user, recipe=recipe)
-        serializer = FavoriteSerializer(
-            obj.recipe, context={'request': request}
-        )
-        return Response(serializer.data, status=status.HTTP_201_CREATED, )
-
-    def delete(self, request, *args, **kwargs):
-        user = self.request.user
-        recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
-        obj = get_object_or_404(Favorite, user=user, recipe=recipe)
-        obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 class FollowView(views.APIView):
     def post(self, request, *args, **kwargs):
         follower = self.request.user
@@ -149,18 +129,39 @@ class FollowView(views.APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ShoppingCartView(views.APIView):
+class TemplateView(views.APIView):
+    modelclass = None
+
     def post(self, request, *args, **kwargs):
         user = self.request.user
         recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
-        obj = ShoppingCart.objects.get_or_create(user=user)
-        recipe.shoppingcart.add(obj[0].id)
+        if self.modelclass == Favorite:
+            self.modelclass.objects.create(user=user, recipe=recipe)
+        elif self.modelclass == ShoppingCart:
+            obj = self.modelclass.objects.get_or_create(user=user)
+            recipe.shoppingcart.add(obj[0].id)
+        else:
+            return Response('Wrong data', status=status.HTTP_400_BAD_REQUEST, )
         serializer = FavoriteSerializer(recipe, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED, )
 
     def delete(self, request, *args, **kwargs):
         user = self.request.user
         recipe = get_object_or_404(Recipe, id=self.kwargs.get('recipe_id'))
-        obj = get_object_or_404(ShoppingCart, user=user, recipe=recipe)
-        recipe.shoppingcart.remove(obj.id)
+        if self.modelclass == Favorite:
+            obj = get_object_or_404(self.modelclass, user=user, recipe=recipe)
+            obj.delete()
+        elif self.modelclass == ShoppingCart:
+            obj = get_object_or_404(self.modelclass, user=user, recipe=recipe)
+            recipe.shoppingcart.remove(obj.id)
+        else:
+            return Response('Wrong data', status=status.HTTP_400_BAD_REQUEST, )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FavoriteView(TemplateView):
+    modelclass = Favorite
+
+
+class ShoppingCartView(TemplateView):
+    modelclass = ShoppingCart

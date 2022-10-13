@@ -1,11 +1,11 @@
 from dblogic.models import Follow
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import AnonymousUser
 from djoser.conf import settings
 from djoser.serializers import TokenCreateSerializer, UserSerializer
 from rest_framework import serializers
 
-User = get_user_model()
+from .models import User
 
 
 class CustomUserSerializer(UserSerializer):

@@ -3,13 +3,10 @@ import datetime
 
 from dblogic.models import (Favorite, Follow, Ingredient, IngredientInRecipe,
                             Recipe, ShoppingCart, Tag)
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 from users.serializers import CustomUserSerializer
-
-User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -193,9 +190,7 @@ class FollowSerializer(serializers.ModelSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        if not isinstance(self.context['request'].user, AnonymousUser):
-            return True
-        return False
+        return isinstance(self.context['request'].user, AnonymousUser)
 
     def get_recipes_count(self, obj):
         return obj.following.recipes.count()

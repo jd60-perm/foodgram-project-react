@@ -1,11 +1,9 @@
 import re
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-
-User = get_user_model()
+from users.models import User
 
 
 class Ingredient(models.Model):
@@ -121,8 +119,8 @@ class Recipe(models.Model):
         ordering = ('-id',)
 
     def __str__(self):
-        return f'''{self.name}. Кол-во добавлений в Избранно
-        е: {self.favorites.all().count()}'''
+        return f'''{self.name}. Кол-во добавлений в
+        Избранное: {self.favorites.all().count()}'''
 
 
 class IngredientInRecipe(models.Model):
