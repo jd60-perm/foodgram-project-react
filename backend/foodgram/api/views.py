@@ -36,8 +36,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = Ingredient.objects.all()
         name_filter = self.request.query_params.get('name', None)
-        queryset = queryset.filter(name__istartswith=name_filter)
-        return queryset
+        return queryset.filter(name__istartswith=name_filter)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):

@@ -36,9 +36,9 @@ class Ingredient(models.Model):
 
 def validate_hex_color(value):
     if not (
-        value[0] == '#' and
-        re.fullmatch(r'^[0-9A-F]+$', value[1:]) and
-        len(value) == 7
+        value[0] == '#'
+        and re.fullmatch(r'^[0-9A-F]+$', value[1:])
+        and len(value) == 7
     ):
         raise ValidationError(f'{value} - не является кодом цвета RGB')
 
